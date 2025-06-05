@@ -164,6 +164,7 @@ MIT
 
 ---
 
-## 🙏 Credits
+## Thanks to
 
-- Built on Pyrogram and inspired by the fastest Telegram leechers/mirror bots.
+[Pyrogram](https://github.com/pyrogram/pyrogram)  
+Inspired by the work of [WZML-X](https://github.com/wzml)
