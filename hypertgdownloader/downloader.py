@@ -11,36 +11,50 @@ from time import time
 from aiofiles import open as aiopen
 from aiofiles.os import makedirs, remove
 from aioshutil import move
+
 from pyrogram import raw, utils
 from pyrogram.errors import AuthBytesInvalid, FloodWait
 from pyrogram.file_id import PHOTO_TYPES, FileId, FileType, ThumbnailSource
 from pyrogram.session import Auth, Session
 from pyrogram.session.internals import MsgId
 
-# You must ensure these are imported from your own repo or injected!
-from ... import LOGGER
-from ...core.config_manager import Config
-from ...core.tg_client import TgClient
-
-
 class HyperTGDownloader:
-    def __init__(self):
-        self.clients = TgClient.helper_bots
-        self.work_loads = TgClient.helper_loads
+    def __init__(
+        self,
+        helper_bots: dict,
+        helper_loads: dict,
+        num_parts: int = None,
+        chunk_size: int = 1024 * 1024,
+        download_dir: str = "downloads/",
+        logger=None,
+    ):
+        """
+        :param helper_bots: Dict[str, pyrogram.Client] - helper bots for parallel download.
+        :param helper_loads: Dict[str, int] - dict tracking current load for each bot.
+        :param num_parts: int - number of parallel parts. Defaults to max(8, len(helper_bots)).
+        :param chunk_size: int - size in bytes for each chunk (default: 1MB).
+        :param download_dir: str - default download directory.
+        :param logger: logging.Logger or print - for logging.
+        """
+        self.clients = helper_bots
+        self.work_loads = helper_loads
+        self.download_dir = download_dir
+        self.num_parts = num_parts or max(8, len(self.clients))
+        self.chunk_size = chunk_size
+        self.logger = logger or print
+
         self.message = None
         self.dump_chat = None
-        self.download_dir = "downloads/"
         self.directory = None
-        self.num_parts = Config.HYPER_THREADS or max(8, len(self.clients))
         self.cache_file_ref = {}
         self.cache_last_access = {}
         self.cache_max_size = 100
         self._processed_bytes = 0
         self.file_size = 0
-        self.chunk_size = 1024 * 1024
         self.file_name = ""
         self._cancel_event = asyncio.Event()
         self.session_pool = {}
+
         asyncio.create_task(self._clean_cache())
 
     @staticmethod
@@ -73,8 +87,8 @@ class HyperTGDownloader:
                 last_error = e
                 retries += 1
                 await asyncio.sleep(1 * retries)
-        LOGGER.error(
-            f"Failed to get message {mid} from {self.dump_chat} with Client {client.me.username}"
+        self.logger(
+            f"Failed to get message {mid} from {self.dump_chat} with Client {getattr(client.me, 'username', client)}"
         )
         raise ValueError(
             f"Bot needs Admin access in Chat or message may be deleted. Error: {last_error}"
@@ -338,7 +352,7 @@ class HyperTGDownloader:
                                 await temp_file.write(chunk)
                         await remove(part_file_path)
                     except Exception as e:
-                        LOGGER.error(
+                        self.logger(
                             f"Error processing part file {part_file_path}: {e}"
                         )
                         raise
@@ -352,7 +366,7 @@ class HyperTGDownloader:
         except asyncio.CancelledError:
             return None
         except Exception as e:
-            LOGGER.error(f"HyperDL Error: {e}")
+            self.logger(f"HyperDL Error: {e}")
             return None
         finally:
             self._cancel_event.set()
@@ -400,14 +414,23 @@ class HyperTGDownloader:
         progress_args=(),
         dump_chat=None,
     ):
+        """
+        Main API method: Download media from Telegram message.
+
+        :param message: Pyrogram Message object containing the media.
+        :param file_name: Where to save (directory or path).
+        :param progress: Optional async callback for progress.
+        :param progress_args: Extra args for callback.
+        :param dump_chat: Optional dump_chat ID for use with helper bots.
+        :return: Path to downloaded file (str)
+        """
         try:
             if dump_chat:
-                self.message = await TgClient.bot.copy_message(
-                    chat_id=dump_chat,
-                    from_chat_id=message.chat.id,
-                    message_id=message.id,
-                    disable_notification=True,
-                )
+                # You must implement this part to copy the message if needed, or skip if not using dump_chat
+                self.logger("You must copy message to dump_chat before using helper bots, implement this as needed.")
+                # Example:
+                # copied_message = await bot.copy_message(...)
+                # self.message = copied_message
             self.dump_chat = dump_chat or message.chat.id
             self.message = self.message or message
             media = await self.get_media_type(self.message)
@@ -429,5 +452,5 @@ class HyperTGDownloader:
                 self.file_name = f"{FileType(file_id_obj.file_type).name.lower()}_{(date or datetime.now()).strftime('%Y-%m-%d_%H-%M-%S')}_{MsgId()}{extension}"
             return await self.handle_download(progress, progress_args)
         except Exception as e:
-            LOGGER.error(f"Download media error: {e}")
+            self.logger(f"Download media error: {e}")
             raise
