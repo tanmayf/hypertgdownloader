@@ -28,14 +28,6 @@ class HyperTGDownloader:
         download_dir: str = "downloads/",
         logger=None,
     ):
-        """
-        :param helper_bots: Dict[str, pyrogram.Client] - helper bots for parallel download.
-        :param helper_loads: Dict[str, int] - dict tracking current load for each bot.
-        :param num_parts: int - number of parallel parts. Defaults to max(8, len(helper_bots)).
-        :param chunk_size: int - size in bytes for each chunk (default: 1MB).
-        :param download_dir: str - default download directory.
-        :param logger: logging.Logger or print - for logging.
-        """
         self.clients = helper_bots
         self.work_loads = helper_loads
         self.download_dir = download_dir
@@ -408,58 +400,57 @@ class HyperTGDownloader:
             return ".bin"
 
     async def download_media(
-    self,
-    message,
-    file_name="downloads/",
-    progress=None,
-    progress_args=(),
-    dump_chat=None,
-):
-    """
-    Main API method: Download media from Telegram message.
+        self,
+        message,
+        file_name="downloads/",
+        progress=None,
+        progress_args=(),
+        dump_chat=None,
+    ):
+        """
+        Main API method: Download media from Telegram message.
 
-    :param message: Pyrogram Message object containing the media.
-    :param file_name: Where to save (directory or path).
-    :param progress: Optional async callback for progress.
-    :param progress_args: Extra args for callback.
-    :param dump_chat: Optional dump_chat ID for use with helper bots.
-    :return: Path to downloaded file (str)
-    """
-    try:
-        if dump_chat:
-            # Copy the message to dump chat so all helper bots can access it
-            bot_client = list(self.clients.values())[0]  # Use the first helper bot
-            copied_message = await bot_client.copy_message(
-                chat_id=dump_chat,
-                from_chat_id=message.chat.id,
-                message_id=message.id,
-                disable_notification=True
-            )
-            self.message = copied_message
-        else:
-            self.message = message
+        :param message: Pyrogram Message object containing the media.
+        :param file_name: Where to save (directory or path).
+        :param progress: Optional async callback for progress.
+        :param progress_args: Extra args for callback.
+        :param dump_chat: Optional dump_chat ID for use with helper bots.
+        :return: Path to downloaded file (str)
+        """
+        try:
+            if dump_chat:
+                # Copy the message to dump chat so all helper bots can access it
+                bot_client = list(self.clients.values())[0]  # Use the first helper bot
+                copied_message = await bot_client.copy_message(
+                    chat_id=dump_chat,
+                    from_chat_id=message.chat.id,
+                    message_id=message.id,
+                    disable_notification=True
+                )
+                self.message = copied_message
+            else:
+                self.message = message
 
-        self.dump_chat = dump_chat or message.chat.id
+            self.dump_chat = dump_chat or message.chat.id
 
-        media = await self.get_media_type(self.message)
-        file_id_str = media if isinstance(media, str) else media.file_id
-        file_id_obj = FileId.decode(file_id_str)
-        file_type = file_id_obj.file_type
-        media_file_name = getattr(media, "file_name", "")
-        self.file_size = getattr(media, "file_size", 0)
-        mime_type = getattr(media, "mime_type", "image/jpeg")
-        date = getattr(media, "date", None)
-        self.directory, self.file_name = ospath.split(file_name)
-        self.file_name = self.file_name or media_file_name or ""
-        if not ospath.isabs(self.file_name):
-            self.directory = Path(argv[0]).parent / (
-                self.directory or self.download_dir
-            )
-        if not self.file_name:
-            extension = await self.get_extension(file_type, mime_type)
-            self.file_name = f"{FileType(file_id_obj.file_type).name.lower()}_{(date or datetime.now()).strftime('%Y-%m-%d_%H-%M-%S')}_{MsgId()}{extension}"
-        return await self.handle_download(progress, progress_args)
-    except Exception as e:
-        self.logger(f"Download media error: {e}")
-        raise
-    
+            media = await self.get_media_type(self.message)
+            file_id_str = media if isinstance(media, str) else media.file_id
+            file_id_obj = FileId.decode(file_id_str)
+            file_type = file_id_obj.file_type
+            media_file_name = getattr(media, "file_name", "")
+            self.file_size = getattr(media, "file_size", 0)
+            mime_type = getattr(media, "mime_type", "image/jpeg")
+            date = getattr(media, "date", None)
+            self.directory, self.file_name = ospath.split(file_name)
+            self.file_name = self.file_name or media_file_name or ""
+            if not ospath.isabs(self.file_name):
+                self.directory = Path(argv[0]).parent / (
+                    self.directory or self.download_dir
+                )
+            if not self.file_name:
+                extension = await self.get_extension(file_type, mime_type)
+                self.file_name = f"{FileType(file_id_obj.file_type).name.lower()}_{(date or datetime.now()).strftime('%Y-%m-%d_%H-%M-%S')}_{MsgId()}{extension}"
+            return await self.handle_download(progress, progress_args)
+        except Exception as e:
+            self.logger(f"Download media error: {e}")
+            raise
