@@ -9,6 +9,7 @@ setup(
     install_requires=[
         "pyrogram>=2.0.0",
         "aiofiles",
+        "aioshutil",  
     ],
     python_requires=">=3.8",
 )
