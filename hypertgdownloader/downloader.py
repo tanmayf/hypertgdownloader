@@ -55,6 +55,7 @@ class HyperTGDownloader:
         self._cancel_event = asyncio.Event()
         self.session_pool = {}
 
+    async def start(self):
         asyncio.create_task(self._clean_cache())
 
     @staticmethod
