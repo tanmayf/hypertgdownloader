@@ -158,9 +158,8 @@ await downloader.download_media(message, file_name="downloads/", dump_chat=LEECH
 
 ---
 
-## 🛡️ License
-
-MIT
+## License
+[MIT License](https://opensource.org/licenses/MIT).
 
 ---
 
