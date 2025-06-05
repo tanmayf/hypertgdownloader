@@ -166,5 +166,4 @@ MIT
 
 ## Thanks to
 
-[Pyrogram](https://github.com/pyrogram/pyrogram)  
-Inspired by the work of [WZML-X](https://github.com/wzml)
+[Pyrogram](https://github.com/pyrogram/pyrogram) [WZML-X](https://github.com/wzml)
