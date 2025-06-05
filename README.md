@@ -146,13 +146,6 @@ await downloader.download_media(message, file_name="downloads/", dump_chat=LEECH
 ---
 
 ## 🧩 FAQ
-
-- **Q: Can I use this in a watermark or renamer bot?**  
-  **A:** YES! Just swap out your download call for `downloader.download_media`.
-
-- **Q: Do I need to change my handler logic?**  
-  **A:** No! Your handlers and bot flow can stay the same.
-
 - **Q: Is there a size/filetype limit?**  
   **A:** Only Telegram's own limits (2GB for bots, 4GB for premium). HyperDL maximizes speed for any allowed file.
 
